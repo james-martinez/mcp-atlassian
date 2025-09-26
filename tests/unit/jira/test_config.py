@@ -48,6 +48,21 @@ def test_from_env_token_auth():
         assert config.ssl_verify is False
 
 
+def test_from_env_cookie_auth():
+    """Test that from_env correctly loads cookie auth configuration."""
+    with patch.dict(
+        os.environ,
+        {
+            "JIRA_URL": "https://jira.example.com",
+            "JIRA_CUSTOM_HEADERS": "Cookie=JSESSIONID=12345",
+        },
+        clear=True,
+    ):
+        config = JiraConfig.from_env()
+        assert config.auth_type == "cookie"
+        assert config.custom_headers == {"Cookie": "JSESSIONID=12345"}
+
+
 def test_from_env_missing_url():
     """Test that from_env raises ValueError when URL is missing."""
     original_env = os.environ.copy()
@@ -74,7 +89,7 @@ def test_from_env_missing_cloud_auth():
     ):
         with pytest.raises(
             ValueError,
-            match="Cloud authentication requires JIRA_USERNAME and JIRA_API_TOKEN",
+            match="Cloud authentication requires JIRA_USERNAME/JIRA_API_TOKEN, OAuth, or a Cookie header in JIRA_CUSTOM_HEADERS",
         ):
             JiraConfig.from_env()
 
@@ -90,7 +105,7 @@ def test_from_env_missing_server_auth():
     ):
         with pytest.raises(
             ValueError,
-            match="Server/Data Center authentication requires JIRA_PERSONAL_TOKEN",
+            match="Server/DC authentication requires JIRA_PERSONAL_TOKEN, JIRA_USERNAME/JIRA_API_TOKEN, or a Cookie header in JIRA_CUSTOM_HEADERS",
         ):
             JiraConfig.from_env()
 

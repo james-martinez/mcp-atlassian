@@ -26,6 +26,21 @@ def test_from_env_success():
         assert config.api_token == "test_token"
 
 
+def test_from_env_cookie_auth():
+    """Test that from_env correctly loads cookie auth configuration."""
+    with patch.dict(
+        os.environ,
+        {
+            "CONFLUENCE_URL": "https://confluence.example.com",
+            "CONFLUENCE_CUSTOM_HEADERS": "Cookie=JSESSIONID=12345",
+        },
+        clear=True,
+    ):
+        config = ConfluenceConfig.from_env()
+        assert config.auth_type == "cookie"
+        assert config.custom_headers == {"Cookie": "JSESSIONID=12345"}
+
+
 def test_from_env_missing_url():
     """Test that from_env raises ValueError when URL is missing."""
     original_env = os.environ.copy()
@@ -52,7 +67,7 @@ def test_from_env_missing_cloud_auth():
     ):
         with pytest.raises(
             ValueError,
-            match="Cloud authentication requires CONFLUENCE_USERNAME and CONFLUENCE_API_TOKEN",
+            match="Cloud authentication requires CONFLUENCE_USERNAME/CONFLUENCE_API_TOKEN, OAuth, or a Cookie header in CONFLUENCE_CUSTOM_HEADERS",
         ):
             ConfluenceConfig.from_env()
 
@@ -68,7 +83,7 @@ def test_from_env_missing_server_auth():
     ):
         with pytest.raises(
             ValueError,
-            match="Server/Data Center authentication requires CONFLUENCE_PERSONAL_TOKEN",
+            match="Server/DC authentication requires CONFLUENCE_PERSONAL_TOKEN, CONFLUENCE_USERNAME/CONFLUENCE_API_TOKEN, or a Cookie header in CONFLUENCE_CUSTOM_HEADERS",
         ):
             ConfluenceConfig.from_env()
 

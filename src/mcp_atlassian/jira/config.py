@@ -20,11 +20,11 @@ class JiraConfig:
 
     Handles authentication for Jira Cloud and Server/Data Center:
     - Cloud: username/API token (basic auth) or OAuth 2.0 (3LO)
-    - Server/DC: personal access token or basic auth
+    - Server/DC: personal access token, basic auth, or cookie-based auth
     """
 
     url: str  # Base URL for Jira
-    auth_type: Literal["basic", "pat", "oauth"]  # Authentication type
+    auth_type: Literal["basic", "pat", "oauth", "cookie"]  # Authentication type
     username: str | None = None  # Email or username (Cloud)
     api_token: str | None = None  # API token (Cloud)
     personal_token: str | None = None  # Personal access token (Server/DC)
@@ -86,30 +86,31 @@ class JiraConfig:
         api_token = os.getenv("JIRA_API_TOKEN")
         personal_token = os.getenv("JIRA_PERSONAL_TOKEN")
 
+        # Custom headers - service-specific only
+        custom_headers = get_custom_headers("JIRA_CUSTOM_HEADERS")
+        has_cookie_header = bool(custom_headers and "Cookie" in custom_headers)
+
         # Check for OAuth configuration
         oauth_config = get_oauth_config_from_env()
         auth_type = None
 
-        # Use the shared utility function directly
-        is_cloud = is_atlassian_cloud_url(url)
-
         if oauth_config:
-            # OAuth is available - could be full config or minimal config for user-provided tokens
             auth_type = "oauth"
-        elif is_cloud:
-            if username and api_token:
-                auth_type = "basic"
-            else:
-                error_msg = "Cloud authentication requires JIRA_USERNAME and JIRA_API_TOKEN, or OAuth configuration (set ATLASSIAN_OAUTH_ENABLE=true for user-provided tokens)"
+        elif personal_token:
+            auth_type = "pat"
+        elif username and api_token:
+            auth_type = "basic"
+        elif has_cookie_header:
+            auth_type = "cookie"
+
+        # If still no auth type, then it's an error.
+        if not auth_type:
+            is_cloud = is_atlassian_cloud_url(url)
+            if is_cloud:
+                error_msg = "Cloud authentication requires JIRA_USERNAME/JIRA_API_TOKEN, OAuth, or a Cookie header in JIRA_CUSTOM_HEADERS"
                 raise ValueError(error_msg)
-        else:  # Server/Data Center
-            if personal_token:
-                auth_type = "pat"
-            elif username and api_token:
-                # Allow basic auth for Server/DC too
-                auth_type = "basic"
             else:
-                error_msg = "Server/Data Center authentication requires JIRA_PERSONAL_TOKEN or JIRA_USERNAME and JIRA_API_TOKEN"
+                error_msg = "Server/DC authentication requires JIRA_PERSONAL_TOKEN, JIRA_USERNAME/JIRA_API_TOKEN, or a Cookie header in JIRA_CUSTOM_HEADERS"
                 raise ValueError(error_msg)
 
         # SSL verification (for Server/DC)
@@ -123,9 +124,6 @@ class JiraConfig:
         https_proxy = os.getenv("JIRA_HTTPS_PROXY", os.getenv("HTTPS_PROXY"))
         no_proxy = os.getenv("JIRA_NO_PROXY", os.getenv("NO_PROXY"))
         socks_proxy = os.getenv("JIRA_SOCKS_PROXY", os.getenv("SOCKS_PROXY"))
-
-        # Custom headers - service-specific only
-        custom_headers = get_custom_headers("JIRA_CUSTOM_HEADERS")
 
         return cls(
             url=url,
@@ -186,6 +184,8 @@ class JiraConfig:
             return bool(self.personal_token)
         elif self.auth_type == "basic":
             return bool(self.username and self.api_token)
+        elif self.auth_type == "cookie":
+            return bool(self.custom_headers and "Cookie" in self.custom_headers)
         logger.warning(
             f"Unknown or unsupported auth_type: {self.auth_type} in JiraConfig"
         )
