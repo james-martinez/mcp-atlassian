@@ -20,11 +20,11 @@ class ConfluenceConfig:
 
     Handles authentication for Confluence Cloud and Server/Data Center:
     - Cloud: username/API token (basic auth) or OAuth 2.0 (3LO)
-    - Server/DC: personal access token or basic auth
+    - Server/DC: personal access token, basic auth, or cookie-based auth
     """
 
     url: str  # Base URL for Confluence
-    auth_type: Literal["basic", "pat", "oauth"]  # Authentication type
+    auth_type: Literal["basic", "pat", "oauth", "cookie"]  # Authentication type
     username: str | None = None  # Email or username
     api_token: str | None = None  # API token used as password
     personal_token: str | None = None  # Personal access token (Server/DC)
@@ -86,30 +86,31 @@ class ConfluenceConfig:
         api_token = os.getenv("CONFLUENCE_API_TOKEN")
         personal_token = os.getenv("CONFLUENCE_PERSONAL_TOKEN")
 
+        # Custom headers - service-specific only
+        custom_headers = get_custom_headers("CONFLUENCE_CUSTOM_HEADERS")
+        has_cookie_header = bool(custom_headers and "Cookie" in custom_headers)
+
         # Check for OAuth configuration
         oauth_config = get_oauth_config_from_env()
         auth_type = None
 
-        # Use the shared utility function directly
-        is_cloud = is_atlassian_cloud_url(url)
-
         if oauth_config:
-            # OAuth is available - could be full config or minimal config for user-provided tokens
             auth_type = "oauth"
-        elif is_cloud:
-            if username and api_token:
-                auth_type = "basic"
-            else:
-                error_msg = "Cloud authentication requires CONFLUENCE_USERNAME and CONFLUENCE_API_TOKEN, or OAuth configuration (set ATLASSIAN_OAUTH_ENABLE=true for user-provided tokens)"
+        elif personal_token:
+            auth_type = "pat"
+        elif username and api_token:
+            auth_type = "basic"
+        elif has_cookie_header:
+            auth_type = "cookie"
+
+        # If still no auth type, then it's an error.
+        if not auth_type:
+            is_cloud = is_atlassian_cloud_url(url)
+            if is_cloud:
+                error_msg = "Cloud authentication requires CONFLUENCE_USERNAME/CONFLUENCE_API_TOKEN, OAuth, or a Cookie header in CONFLUENCE_CUSTOM_HEADERS"
                 raise ValueError(error_msg)
-        else:  # Server/Data Center
-            if personal_token:
-                auth_type = "pat"
-            elif username and api_token:
-                # Allow basic auth for Server/DC too
-                auth_type = "basic"
             else:
-                error_msg = "Server/Data Center authentication requires CONFLUENCE_PERSONAL_TOKEN or CONFLUENCE_USERNAME and CONFLUENCE_API_TOKEN"
+                error_msg = "Server/DC authentication requires CONFLUENCE_PERSONAL_TOKEN, CONFLUENCE_USERNAME/CONFLUENCE_API_TOKEN, or a Cookie header in CONFLUENCE_CUSTOM_HEADERS"
                 raise ValueError(error_msg)
 
         # SSL verification (for Server/DC)
@@ -186,6 +187,8 @@ class ConfluenceConfig:
             return bool(self.personal_token)
         elif self.auth_type == "basic":
             return bool(self.username and self.api_token)
+        elif self.auth_type == "cookie":
+            return bool(self.custom_headers and "Cookie" in self.custom_headers)
         logger.warning(
             f"Unknown or unsupported auth_type: {self.auth_type} in ConfluenceConfig"
         )

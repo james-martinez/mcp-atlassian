@@ -104,6 +104,7 @@ def test_init_from_env():
     ):
         mock_config = MagicMock()
         mock_config.auth_type = "basic"  # needed for the if condition
+        mock_config.custom_headers = None
         mock_from_env.return_value = mock_config
 
         client = JiraClient()
@@ -289,3 +290,26 @@ def test_init_no_proxies(monkeypatch):
     )
     client = JiraClient(config=config)
     assert mock_session.proxies == {}
+
+
+def test_init_with_cookie_header_auth():
+    """Test initializing the client with cookie header auth configuration."""
+    with patch("mcp_atlassian.jira.client.Jira") as mock_jira, patch(
+        "mcp_atlassian.jira.client.configure_ssl_verification"
+    ):
+        config = JiraConfig(
+            url="https://jira.example.com",
+            auth_type="cookie",
+            custom_headers={"Cookie": "JSESSIONID=12345"},
+        )
+
+        client = JiraClient(config=config)
+
+        mock_jira.assert_called_once_with(
+            url="https://jira.example.com",
+            cloud=False,
+            verify_ssl=True,
+        )
+        client.jira._session.headers.__setitem__.assert_called_once_with(
+            "Cookie", "JSESSIONID=12345"
+        )

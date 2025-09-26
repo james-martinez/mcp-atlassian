@@ -3,6 +3,8 @@
 import os
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from mcp_atlassian.confluence import ConfluenceFetcher
 from mcp_atlassian.confluence.client import ConfluenceClient
 from mcp_atlassian.confluence.config import ConfluenceConfig
@@ -95,6 +97,33 @@ def test_init_with_token_auth():
         )
 
 
+def test_init_with_cookie_header_auth():
+    """Test initializing the client with cookie header auth configuration."""
+    with patch(
+        "mcp_atlassian.confluence.client.Confluence"
+    ) as mock_confluence, patch(
+        "mcp_atlassian.confluence.client.configure_ssl_verification"
+    ), patch(
+        "mcp_atlassian.preprocessing.confluence.ConfluencePreprocessor"
+    ):
+        config = ConfluenceConfig(
+            url="https://confluence.example.com",
+            auth_type="cookie",
+            custom_headers={"Cookie": "JSESSIONID=12345"},
+        )
+
+        client = ConfluenceClient(config=config)
+
+        mock_confluence.assert_called_once_with(
+            url="https://confluence.example.com",
+            cloud=False,
+            verify_ssl=True,
+        )
+        client.confluence._session.headers.__setitem__.assert_called_once_with(
+            "Cookie", "JSESSIONID=12345"
+        )
+
+
 def test_init_from_env():
     """Test initializing the client from environment variables."""
     # Arrange
@@ -107,6 +136,7 @@ def test_init_from_env():
         patch("mcp_atlassian.confluence.client.configure_ssl_verification"),
     ):
         mock_config = MagicMock()
+        mock_config.custom_headers = None
         mock_from_env.return_value = mock_config
 
         # Act

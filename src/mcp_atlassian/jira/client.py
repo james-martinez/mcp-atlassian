@@ -83,6 +83,15 @@ class JiraClient:
                 cloud=self.config.is_cloud,
                 verify_ssl=self.config.ssl_verify,
             )
+        elif self.config.auth_type == "cookie":
+            logger.debug(
+                f"Initializing Jira client with Cookie header auth. URL: {self.config.url}"
+            )
+            self.jira = Jira(
+                url=self.config.url,
+                cloud=self.config.is_cloud,
+                verify_ssl=self.config.ssl_verify,
+            )
         else:  # basic auth
             logger.debug(
                 f"Initializing Jira client with Basic auth. "

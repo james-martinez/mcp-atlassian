@@ -412,7 +412,7 @@ class TestJiraClientOAuth:
             ),
         ):
             with pytest.raises(
-                ValueError,  # Adjusted to actual error raised by JiraConfig.from_env
-                match=r"Cloud authentication requires JIRA_USERNAME and JIRA_API_TOKEN, or OAuth configuration.*",
+                ValueError,
+                match=r"Cloud authentication requires JIRA_USERNAME/JIRA_API_TOKEN, OAuth, or a Cookie header in JIRA_CUSTOM_HEADERS",
             ):
                 JiraClient()
