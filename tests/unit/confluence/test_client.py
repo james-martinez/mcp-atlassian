@@ -3,8 +3,6 @@
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from mcp_atlassian.confluence import ConfluenceFetcher
 from mcp_atlassian.confluence.client import ConfluenceClient
 from mcp_atlassian.confluence.config import ConfluenceConfig
@@ -99,12 +97,10 @@ def test_init_with_token_auth():
 
 def test_init_with_cookie_header_auth():
     """Test initializing the client with cookie header auth configuration."""
-    with patch(
-        "mcp_atlassian.confluence.client.Confluence"
-    ) as mock_confluence, patch(
-        "mcp_atlassian.confluence.client.configure_ssl_verification"
-    ), patch(
-        "mcp_atlassian.preprocessing.confluence.ConfluencePreprocessor"
+    with (
+        patch("mcp_atlassian.confluence.client.Confluence") as mock_confluence,
+        patch("mcp_atlassian.confluence.client.configure_ssl_verification"),
+        patch("mcp_atlassian.preprocessing.confluence.ConfluencePreprocessor"),
     ):
         config = ConfluenceConfig(
             url="https://confluence.example.com",

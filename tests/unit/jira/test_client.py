@@ -294,8 +294,9 @@ def test_init_no_proxies(monkeypatch):
 
 def test_init_with_cookie_header_auth():
     """Test initializing the client with cookie header auth configuration."""
-    with patch("mcp_atlassian.jira.client.Jira") as mock_jira, patch(
-        "mcp_atlassian.jira.client.configure_ssl_verification"
+    with (
+        patch("mcp_atlassian.jira.client.Jira") as mock_jira,
+        patch("mcp_atlassian.jira.client.configure_ssl_verification"),
     ):
         config = JiraConfig(
             url="https://jira.example.com",
