@@ -1,5 +1,6 @@
 """Environment variable utility functions for MCP Atlassian."""
 
+import json
 import os
 
 
@@ -52,7 +53,7 @@ def is_env_ssl_verify(env_var_name: str, default: str = "true") -> bool:
 
 
 def get_custom_headers(env_var_name: str) -> dict[str, str]:
-    """Parse custom headers from environment variable containing comma-separated key=value pairs.
+    """Parse custom headers from environment variable containing JSON or comma-separated key=value pairs.
 
     Args:
         env_var_name: Name of the environment variable to read
@@ -61,17 +62,31 @@ def get_custom_headers(env_var_name: str) -> dict[str, str]:
         Dictionary of parsed headers
 
     Examples:
+        >>> # With CUSTOM_HEADERS='{"Cookie": "session=abc123"}'
+        >>> get_custom_headers("CUSTOM_HEADERS")
+        {'Cookie': 'session=abc123'}
         >>> # With CUSTOM_HEADERS="X-Custom=value1,X-Other=value2"
-        >>> parse_custom_headers("CUSTOM_HEADERS")
+        >>> get_custom_headers("CUSTOM_HEADERS")
         {'X-Custom': 'value1', 'X-Other': 'value2'}
         >>> # With unset environment variable
-        >>> parse_custom_headers("UNSET_VAR")
+        >>> get_custom_headers("UNSET_VAR")
         {}
     """
     header_string = os.getenv(env_var_name)
     if not header_string or not header_string.strip():
         return {}
 
+    # Try to parse as JSON first
+    try:
+        parsed = json.loads(header_string)
+        if isinstance(parsed, dict):
+            # Convert all values to strings for consistency
+            return {str(k): str(v) for k, v in parsed.items()}
+    except (json.JSONDecodeError, ValueError):
+        # Fall back to comma-separated parsing
+        pass
+
+    # Parse as comma-separated key=value pairs
     headers = {}
     pairs = header_string.split(",")
 

@@ -54,11 +54,16 @@ def get_available_services() -> dict[str, bool | None]:
         else:  # Server/Data Center non-OAuth
             if os.getenv("CONFLUENCE_PERSONAL_TOKEN") or (
                 os.getenv("CONFLUENCE_USERNAME") and os.getenv("CONFLUENCE_API_TOKEN")
-            ):
+            ) or os.getenv("CONFLUENCE_CUSTOM_HEADERS"):
                 confluence_is_setup = True
-                logger.info(
-                    "Using Confluence Server/Data Center authentication (PAT or Basic Auth)"
-                )
+                if os.getenv("CONFLUENCE_CUSTOM_HEADERS"):
+                    logger.info(
+                        "Using Confluence Server/Data Center authentication (Custom Headers/Cookies)"
+                    )
+                else:
+                    logger.info(
+                        "Using Confluence Server/Data Center authentication (PAT or Basic Auth)"
+                    )
     elif os.getenv("ATLASSIAN_OAUTH_ENABLE", "").lower() in ("true", "1", "yes"):
         confluence_is_setup = True
         logger.info(
@@ -107,11 +112,16 @@ def get_available_services() -> dict[str, bool | None]:
         else:  # Server/Data Center non-OAuth
             if os.getenv("JIRA_PERSONAL_TOKEN") or (
                 os.getenv("JIRA_USERNAME") and os.getenv("JIRA_API_TOKEN")
-            ):
+            ) or os.getenv("JIRA_CUSTOM_HEADERS"):
                 jira_is_setup = True
-                logger.info(
-                    "Using Jira Server/Data Center authentication (PAT or Basic Auth)"
-                )
+                if os.getenv("JIRA_CUSTOM_HEADERS"):
+                    logger.info(
+                        "Using Jira Server/Data Center authentication (Custom Headers/Cookies)"
+                    )
+                else:
+                    logger.info(
+                        "Using Jira Server/Data Center authentication (PAT or Basic Auth)"
+                    )
     elif os.getenv("ATLASSIAN_OAUTH_ENABLE", "").lower() in ("true", "1", "yes"):
         jira_is_setup = True
         logger.info(

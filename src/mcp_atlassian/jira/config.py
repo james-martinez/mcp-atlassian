@@ -185,7 +185,8 @@ class JiraConfig:
         elif self.auth_type == "basic":
             return bool(self.username and self.api_token)
         elif self.auth_type == "cookie":
-            return bool(self.custom_headers and "Cookie" in self.custom_headers)
+            has_cookie = bool(self.custom_headers and "Cookie" in self.custom_headers)
+            return has_cookie
         logger.warning(
             f"Unknown or unsupported auth_type: {self.auth_type} in JiraConfig"
         )
