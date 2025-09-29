@@ -40,7 +40,7 @@ https://github.com/user-attachments/assets/7fe9c488-ad0c-4876-9b54-120b666bb785
 
 ### 🔐 1. Authentication Setup
 
-MCP Atlassian supports three authentication methods:
+MCP Atlassian supports four authentication methods:
 
 #### A. API Token Authentication (Cloud) - **Recommended**
 
@@ -109,6 +109,17 @@ This option is useful in scenarios where OAuth credential management is centrali
 > [!TIP]
 > **Multi-Cloud OAuth Support**: If you're building a multi-tenant application where users provide their own OAuth tokens, see the [Multi-Cloud OAuth Support](#multi-cloud-oauth-support) section for minimal configuration setup.
 
+#### D. Cookie-based Authentication (Advanced)
+
+For advanced use cases, such as integrating with systems that use session cookies, you can authenticate by providing a `Cookie` header directly. This method is supported for both Jira and Confluence but should be used with caution, as it may be less secure than token-based methods.
+
+To use cookie-based authentication, set the `Cookie` header in the appropriate `CUSTOM_HEADERS` environment variable:
+
+- **For Jira**: `JIRA_CUSTOM_HEADERS="Cookie: <YOUR_JIRA_COOKIE>"`
+- **For Confluence**: `CONFLUENCE_CUSTOM_HEADERS="Cookie: <YOUR_CONFLUENCE_COOKIE>"`
+
+This method is useful in environments where you can programmatically obtain a valid session cookie.
+
 ### 📦 2. Installation
 
 MCP Atlassian is distributed as a Docker image. This is the recommended way to run the server, especially for IDE integration. Ensure you have Docker installed.
@@ -144,6 +155,7 @@ There are two main approaches to configure the Docker container:
 > - `JIRA_PROJECTS_FILTER`: Filter by project keys (e.g., "PROJ,DEV,SUPPORT")
 > - `READ_ONLY_MODE`: Set to "true" to disable write operations
 > - `MCP_VERBOSE`: Set to "true" for more detailed logging
+> - `MCP_VERY_VERBOSE`: Set to "true" for highly detailed debug-level logging
 > - `MCP_LOGGING_STDOUT`: Set to "true" to log to stdout instead of stderr
 > - `ENABLED_TOOLS`: Comma-separated list of tool names to enable (e.g., "confluence_search,jira_get_issue")
 >
@@ -336,11 +348,10 @@ This configuration is for when you are providing your own externally managed OAu
 <details>
 <summary>Proxy Configuration</summary>
 
-MCP Atlassian supports routing API requests through standard HTTP/HTTPS/SOCKS proxies. Configure using environment variables:
+MCP Atlassian supports routing API requests through standard HTTP/HTTPS or SOCKS proxies. You can configure proxy settings using environment variables.
 
-- Supports standard `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`, `SOCKS_PROXY`.
-- Service-specific overrides are available (e.g., `JIRA_HTTPS_PROXY`, `CONFLUENCE_NO_PROXY`).
-- Service-specific variables override global ones for that service.
+- **Global Proxies**: Set `HTTP_PROXY`, `HTTPS_PROXY`, or `SOCKS_PROXY` to route all requests through a proxy. `NO_PROXY` can be used to exclude specific hosts.
+- **Service-Specific Proxies**: You can override global settings for Jira or Confluence individually. For example, `JIRA_HTTPS_PROXY` will be used for Jira API calls, while `CONFLUENCE_HTTPS_PROXY` will be used for Confluence. If a service-specific variable is not set, the global variable is used as a fallback.
 
 Add the relevant proxy variables to the `args` (using `-e`) and `env` sections of your MCP configuration:
 
@@ -354,15 +365,17 @@ Add the relevant proxy variables to the `args` (using `-e`) and `env` sections o
         "-i",
         "--rm",
         "-e", "... existing Confluence/Jira vars",
-        "-e", "HTTP_PROXY",
         "-e", "HTTPS_PROXY",
+        "-e", "SOCKS_PROXY",
+        "-e", "JIRA_HTTPS_PROXY",
         "-e", "NO_PROXY",
         "ghcr.io/sooperset/mcp-atlassian:latest"
       ],
       "env": {
         "... existing Confluence/Jira vars": "...",
-        "HTTP_PROXY": "http://proxy.internal:8080",
-        "HTTPS_PROXY": "http://proxy.internal:8080",
+        "HTTPS_PROXY": "http://global-proxy.internal:8080",
+        "SOCKS_PROXY": "socks5://socks-proxy.internal:1080",
+        "JIRA_HTTPS_PROXY": "http://jira-specific-proxy.internal:8080",
         "NO_PROXY": "localhost,.your-company.com"
       }
     }
@@ -440,7 +453,7 @@ MCP Atlassian supports multi-cloud OAuth scenarios where each user connects to t
 
 2. Users provide authentication via HTTP headers:
    - `Authorization: Bearer <user_oauth_token>`
-   - `X-Atlassian-Cloud-Id: <user_cloud_id>`
+   - `X-Atlassian-Cloud-Id: <user_cloud_id>` (optional, but required for multi-tenant setups)
 
 **Example Integration (Python):**
 ```python
@@ -690,12 +703,15 @@ Here's a complete example of setting up multi-user authentication with streamabl
     "mcp-atlassian-service": {
       "url": "http://localhost:9000/mcp",
       "headers": {
-        "Authorization": "Token <USER_PERSONAL_ACCESS_TOKEN>"
+        "Authorization": "Bearer <USER_PERSONAL_ACCESS_TOKEN>"
       }
     }
   }
 }
 ```
+
+> [!NOTE]
+> For Server/Data Center, the `Authorization` header should contain the user's Personal Access Token (PAT). While the `Bearer` scheme is used here for consistency, some older versions of Jira/Confluence Server may require the `Token` scheme. If you encounter issues, try `Authorization: Token <USER_PERSONAL_ACCESS_TOKEN>`.
 
 4. Required environment variables in `.env`:
    ```bash
