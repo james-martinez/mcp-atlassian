@@ -52,9 +52,14 @@ def get_available_services() -> dict[str, bool | None]:
                 confluence_is_setup = True
                 logger.info("Using Confluence Cloud Basic Authentication (API Token)")
         else:  # Server/Data Center non-OAuth
-            if os.getenv("CONFLUENCE_PERSONAL_TOKEN") or (
-                os.getenv("CONFLUENCE_USERNAME") and os.getenv("CONFLUENCE_API_TOKEN")
-            ) or os.getenv("CONFLUENCE_CUSTOM_HEADERS"):
+            if (
+                os.getenv("CONFLUENCE_PERSONAL_TOKEN")
+                or (
+                    os.getenv("CONFLUENCE_USERNAME")
+                    and os.getenv("CONFLUENCE_API_TOKEN")
+                )
+                or os.getenv("CONFLUENCE_CUSTOM_HEADERS")
+            ):
                 confluence_is_setup = True
                 if os.getenv("CONFLUENCE_CUSTOM_HEADERS"):
                     logger.info(
@@ -110,9 +115,11 @@ def get_available_services() -> dict[str, bool | None]:
                 jira_is_setup = True
                 logger.info("Using Jira Cloud Basic Authentication (API Token)")
         else:  # Server/Data Center non-OAuth
-            if os.getenv("JIRA_PERSONAL_TOKEN") or (
-                os.getenv("JIRA_USERNAME") and os.getenv("JIRA_API_TOKEN")
-            ) or os.getenv("JIRA_CUSTOM_HEADERS"):
+            if (
+                os.getenv("JIRA_PERSONAL_TOKEN")
+                or (os.getenv("JIRA_USERNAME") and os.getenv("JIRA_API_TOKEN"))
+                or os.getenv("JIRA_CUSTOM_HEADERS")
+            ):
                 jira_is_setup = True
                 if os.getenv("JIRA_CUSTOM_HEADERS"):
                     logger.info(
