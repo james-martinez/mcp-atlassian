@@ -416,7 +416,7 @@ async def create_page(
         ),
     ],
     parent_id: Annotated[
-        str | None,
+        str | int | None,
         Field(
             description="(Optional) parent page ID. If provided, this page will be created as a child of the specified page",
             default=None,
@@ -509,7 +509,7 @@ async def update_page(
         str | None, Field(description="Optional comment for this version", default=None)
     ] = None,
     parent_id: Annotated[
-        str | None,
+        str | int | None,
         Field(description="Optional the new parent page ID", default=None),
         BeforeValidator(lambda x: str(x) if x is not None else None),
     ] = None,

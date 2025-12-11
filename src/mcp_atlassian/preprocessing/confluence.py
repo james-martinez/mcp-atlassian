@@ -5,6 +5,8 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from urllib.parse import urlparse
+
 from md2conf.converter import (
     ConfluenceConverterOptions,
     ConfluenceStorageFormatConverter,
@@ -12,6 +14,7 @@ from md2conf.converter import (
     elements_to_string,
     markdown_to_html,
 )
+from md2conf.metadata import ConfluenceSiteMetadata
 
 from .base import BasePreprocessor
 
@@ -61,11 +64,20 @@ class ConfluencePreprocessor(BasePreprocessor):
                     render_mermaid=False,
                 )
 
+                # Create site metadata
+                parsed_url = urlparse(self.base_url)
+                site_metadata = ConfluenceSiteMetadata(
+                    domain=parsed_url.netloc,
+                    base_path=parsed_url.path,
+                    space_key=None,
+                )
+
                 # Create a converter
                 converter = ConfluenceStorageFormatConverter(
                     options=options,
                     path=Path(temp_dir) / "temp.md",
                     root_dir=Path(temp_dir),
+                    site_metadata=site_metadata,
                     page_metadata={},
                 )
 
